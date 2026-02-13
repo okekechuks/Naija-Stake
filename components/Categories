@@ -1,0 +1,27 @@
+const categories = [
+  { name: "Sports", icon: "🏀" },
+  { name: "Politics", icon: "🏛️" },
+  { name: "Entertainment", icon: "🎬" },
+  { name: "Market", icon: "📈" },
+  { name: "Technology", icon: "💻" }
+];
+
+export default function Categories() {
+  return (
+    <section>
+      <h2 className="text-lg font-medium mb-4">Categories</h2>
+
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        {categories.map(cat => (
+          <div
+            key={cat.name}
+            className="bg-slate-900 hover:bg-slate-800 transition rounded-xl p-6 cursor-pointer text-center"
+          >
+            <div className="text-3xl">{cat.icon}</div>
+            <p className="mt-2 text-sm font-medium">{cat.name}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}

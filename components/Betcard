@@ -1,0 +1,22 @@
+interface Bet {
+  title: string;
+  totalStaked: string;
+  participants: number;
+  closesIn: string;
+}
+
+export default function BetCard({ bet }: { bet: Bet }) {
+  return (
+    <div className="bg-slate-900 rounded-xl p-5 hover:bg-slate-800 transition cursor-pointer">
+      <h3 className="font-medium text-sm mb-4 line-clamp-2">
+        {bet.title}
+      </h3>
+
+      <div className="flex justify-between text-xs text-slate-400">
+        <span>💰 {bet.totalStaked}</span>
+        <span>👥 {bet.participants}</span>
+        <span>⏳ {bet.closesIn}</span>
+      </div>
+    </div>
+  );
+}

@@ -1,0 +1,41 @@
+import BetCard from "./BetCard";
+
+const popularBets = [
+  {
+    id: "1",
+    title: "Will Bitcoin hit $80k before March?",
+    totalStaked: "₦1,200,000",
+    participants: 214,
+    closesIn: "3h"
+  },
+  {
+    id: "2",
+    title: "Will Arsenal beat Chelsea?",
+    totalStaked: "₦870,000",
+    participants: 146,
+    closesIn: "1h"
+  },
+  {
+    id: "3",
+    title: "Will Apple announce iPhone 17 this year?",
+    totalStaked: "₦540,000",
+    participants: 89,
+    closesIn: "6h"
+  }
+];
+
+export default function PopularBets() {
+  return (
+    <section>
+      <h2 className="text-lg font-medium mb-4 flex items-center gap-2">
+        🔥 Popular Bets
+      </h2>
+
+      <div className="grid md:grid-cols-3 gap-4">
+        {popularBets.map(bet => (
+          <BetCard key={bet.id} bet={bet} />
+        ))}
+      </div>
+    </section>
+  );
+}
