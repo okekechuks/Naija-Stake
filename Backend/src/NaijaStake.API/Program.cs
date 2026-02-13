@@ -43,6 +43,8 @@ builder.Services.AddScoped<NaijaStake.Infrastructure.Services.IUserService, Naij
 builder.Services.AddScoped<NaijaStake.Infrastructure.Services.IWalletService, NaijaStake.Infrastructure.Services.WalletService>();
 builder.Services.AddScoped<NaijaStake.Infrastructure.Services.IBetService, NaijaStake.Infrastructure.Services.BetService>();
 builder.Services.AddScoped<NaijaStake.Infrastructure.Services.IStakeService, NaijaStake.Infrastructure.Services.StakeService>();
+// Token service for JWT generation
+builder.Services.AddSingleton<NaijaStake.Infrastructure.Services.ITokenService, NaijaStake.Infrastructure.Services.TokenService>();
 
 // Authentication
 var secretKey = Encoding.ASCII.GetBytes(jwtSettings["SecretKey"]!);
