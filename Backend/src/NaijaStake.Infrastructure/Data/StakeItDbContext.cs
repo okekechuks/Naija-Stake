@@ -16,6 +16,7 @@ public class StakeItDbContext : DbContext
     public DbSet<Bet> Bets { get; set; } = null!;
     public DbSet<Outcome> Outcomes { get; set; } = null!;
     public DbSet<Stake> Stakes { get; set; } = null!;
+    public DbSet<RefreshToken> RefreshTokens { get; set; } = null!;
 
     public StakeItDbContext(DbContextOptions<StakeItDbContext> options) : base(options)
     {
@@ -241,6 +242,22 @@ public class StakeItDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(e => e.OutcomeId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // RefreshToken mapping
+        modelBuilder.Entity<RefreshToken>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.UserId).IsRequired();
+            entity.Property(e => e.Token).IsRequired().HasMaxLength(512);
+            entity.Property(e => e.ExpiresAt).IsRequired();
+            entity.Property(e => e.CreatedAt).IsRequired();
+            entity.Property(e => e.RevokedAt);
+
+            entity.HasIndex(e => e.Token).IsUnique();
+            entity.HasIndex(e => e.UserId);
+            // Index to support cleanup and expiration queries
+            entity.HasIndex(e => e.ExpiresAt);
         });
     }
 }

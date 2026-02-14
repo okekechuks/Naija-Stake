@@ -6,15 +6,18 @@ namespace NaijaStake.Infrastructure.Services;
 public class UserService : IUserService
 {
     private readonly IUserRepository _userRepository;
+    private readonly IPasswordHasher _passwordHasher;
 
-    public UserService(IUserRepository userRepository)
+    public UserService(IUserRepository userRepository, IPasswordHasher passwordHasher)
     {
         _userRepository = userRepository;
+        _passwordHasher = passwordHasher;
     }
 
-    public async Task<User> CreateAsync(string email, string phoneNumber, string passwordHash, string firstName, string lastName, CancellationToken cancellationToken = default)
+    public async Task<User> CreateAsync(string email, string phoneNumber, string password, string firstName, string lastName, CancellationToken cancellationToken = default)
     {
-        var user = User.Create(email, phoneNumber, passwordHash, firstName, lastName);
+        var hashed = _passwordHasher.Hash(password);
+        var user = User.Create(email, phoneNumber, hashed, firstName, lastName);
         await _userRepository.AddAsync(user, cancellationToken);
         await _userRepository.SaveChangesAsync(cancellationToken);
         return user;

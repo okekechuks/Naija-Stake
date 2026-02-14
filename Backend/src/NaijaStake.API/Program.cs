@@ -25,11 +25,14 @@ builder.Services.AddDbContext<StakeItDbContext>(options =>
         npgsqlOptions.MigrationsHistoryTable("__EFMigrationsHistory");
     }));
 
-// Redis
-var redisOptions = ConfigurationOptions.Parse(redisConnection);
-var redis = ConnectionMultiplexer.Connect(redisOptions);
-builder.Services.AddSingleton(redis);
-builder.Services.AddSingleton(redis.GetDatabase());
+// Redis (only initialize when configured)
+if (!string.IsNullOrWhiteSpace(redisConnection))
+{
+    var redisOptions = ConfigurationOptions.Parse(redisConnection);
+    var redis = ConnectionMultiplexer.Connect(redisOptions);
+    builder.Services.AddSingleton(redis);
+    builder.Services.AddSingleton(redis.GetDatabase());
+}
 
 // Repositories
 builder.Services.AddScoped<IUserRepository, UserRepository>();
@@ -45,6 +48,10 @@ builder.Services.AddScoped<NaijaStake.Infrastructure.Services.IBetService, Naija
 builder.Services.AddScoped<NaijaStake.Infrastructure.Services.IStakeService, NaijaStake.Infrastructure.Services.StakeService>();
 // Token service for JWT generation
 builder.Services.AddSingleton<NaijaStake.Infrastructure.Services.ITokenService, NaijaStake.Infrastructure.Services.TokenService>();
+builder.Services.AddScoped<NaijaStake.Infrastructure.Services.IPasswordHasher, NaijaStake.Infrastructure.Services.BcryptPasswordHasher>();
+builder.Services.AddScoped<NaijaStake.Infrastructure.Services.IRefreshTokenService, NaijaStake.Infrastructure.Services.RefreshTokenService>();
+// Background cleanup for refresh tokens
+builder.Services.AddHostedService<NaijaStake.API.Services.RefreshTokenCleanupService>();
 
 // Authentication
 var secretKey = Encoding.ASCII.GetBytes(jwtSettings["SecretKey"]!);
@@ -104,10 +111,18 @@ app.MapControllers();
 // Database migrations on startup (development only)
 if (app.Environment.IsDevelopment())
 {
-    using (var scope = app.Services.CreateScope())
+    try
     {
-        var db = scope.ServiceProvider.GetRequiredService<StakeItDbContext>();
-        await db.Database.MigrateAsync();
+        using (var scope = app.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<StakeItDbContext>();
+            await db.Database.MigrateAsync();
+        }
+    }
+    catch (Exception ex)
+    {
+        var logger = app.Services.GetService<Microsoft.Extensions.Logging.ILogger<Program>>();
+        logger?.LogWarning(ex, "Skipping DB migrations (likely running in test environment without DB).");
     }
 }
 

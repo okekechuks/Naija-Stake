@@ -17,11 +17,13 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.2" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.0" />
     <PackageReference Include="FluentAssertions" Version="6.12.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" Version="8.0.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\NaijaStake.Domain\NaijaStake.Domain.csproj" />
     <ProjectReference Include="..\..\src\NaijaStake.Infrastructure\NaijaStake.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\NaijaStake.API\NaijaStake.API.csproj" />
   </ItemGroup>
 
 </Project>
