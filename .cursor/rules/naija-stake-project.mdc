@@ -1,0 +1,185 @@
+---
+alwaysApply: true
+description: Naija-Stake real-money prediction/staking platform architecture and rules
+---
+
+# Naija-Stake Project Context
+
+## Architecture Overview
+- **Frontend**: Next.js 14 (App Router) with TypeScript and Tailwind CSS
+- **Backend**: ASP.NET Core Web API (C#)
+- **Database**: PostgreSQL
+- **Caching & Locking**: Redis
+- **Real-time updates**: SignalR
+- **Auth**: JWT with refresh tokens
+- **Payments**: External provider (Paystack/Stripe style webhooks)
+
+## Project Concept
+Users can place monetary stakes on categorized prediction bets.
+
+**Categories**:
+- Sports
+- Politics
+- Entertainment
+- Market
+- Technology
+
+## Core Rules (CRITICAL - Never Violate)
+
+### Money Handling
+- **ALL money logic must be handled ONLY in the backend**
+- **NEVER calculate payouts in the frontend**
+- Use `decimal` type for all monetary values in C# (never `float` or `double`)
+- Every wallet balance change must create a transaction record
+- Backend is the source of truth for all financial calculations
+
+### Bet Lifecycle
+```
+Draft → Open → Closed → Resolved → Paid
+```
+- Bet resolution must be idempotent
+- Use Redis locks to prevent race conditions when placing stakes
+- Prevent double staking or double resolution
+
+### Transaction Types
+- `Deposit`: Money enters wallet
+- `StakeLocked`: Funds locked from available to locked
+- `StakeRefund`: Locked funds returned (lost stake or refund)
+- `WinPayout`: Winnings paid (stake + profit moved to available)
+- `PlatformFee`: Fee deducted from available
+- `Withdrawal`: Money leaves wallet
+
+## Main Features
+
+### 1. User System
+- Registration / Login
+- JWT auth with refresh tokens
+- Wallet balance
+- Transaction history
+
+### 2. Wallet System
+- Immutable transaction ledger (append-only)
+- Locked funds must not be withdrawable
+- Balance calculated from transaction history
+
+### 3. Betting Engine
+Each bet contains:
+- Title
+- Description
+- Category
+- Closing time
+- Resolution time
+- Status
+- Outcome options
+- Total pool amount
+
+**Stake flow**:
+1. Validate bet is open
+2. Lock wallet (Redis)
+3. Lock bet (Redis)
+4. Deduct balance
+5. Add to locked pool
+6. Record transaction
+
+### 4. Popular Bets
+Popularity score formula:
+```
+(TotalStaked * 0.5) + (Participants * 0.3) + (RecentActivity * 0.2)
+```
+Cache popular bets in Redis.
+
+### 5. Frontend UI Requirements
+- Simple, minimal, modern design
+- Categories grid
+- Popular Bets panel
+- Bet cards
+- Bet detail page with stake input
+- Wallet page
+- Mobile-first responsive design
+- **No business logic in frontend** - only UI and API calls
+
+## Coding Standards
+
+### Backend (C#)
+- Clean architecture principles
+- Domain-driven design (DDD) structure
+- Use DTOs for all API requests/responses
+- Use async/await properly
+- Validate all inputs
+- Use repository pattern or similar abstraction
+- **Avoid putting business logic in controllers** - use services/domain entities
+- Reference: [Backend/ARCHITECTURE.md](mdc:Backend/ARCHITECTURE.md)
+
+### Frontend (Next.js/TypeScript)
+- TypeScript strict mode
+- Tailwind CSS for styling
+- Component-based architecture
+- API calls via fetch or axios
+- No business logic - only presentation
+
+## Security & Safety
+
+When generating code:
+- Always consider security implications
+- Ensure money operations are atomic (use transactions)
+- Avoid floating point arithmetic for currency
+- Add comments explaining critical sections
+- Suggest improvements if architecture risks exist
+- Use Redis locks for critical sections
+- Implement idempotency keys for financial operations
+
+## Project Structure
+
+### Backend
+- `Backend/src/NaijaStake.Domain/` - Domain entities, value objects, business logic
+- `Backend/src/NaijaStake.Infrastructure/` - Data access, repositories, services
+- `Backend/src/NaijaStake.API/` - Controllers, DTOs, middleware
+
+### Frontend
+- `app/` - Next.js App Router pages
+- `components/` - React components
+
+## Key Files
+- Backend architecture: [Backend/ARCHITECTURE.md](mdc:Backend/ARCHITECTURE.md)
+- Backend README: [Backend/README.md](mdc:Backend/README.md)
+- Main page: [app/page.ts](mdc:app/page.ts)
+- Popular Bets component: [components/PopularBets](mdc:components/PopularBets)
+
+## Project Phases
+
+### Phase 1 — Foundation ✅ (Done)
+- Project scaffolding, domain models, DB context, basic repos
+- StakeItDbContext, domain entities (User, RefreshToken, etc.)
+- Repository base and implementations (IUserRepository, UserRepository)
+- Initial test setup
+
+### Phase 2 — Auth & Tokens ✅ (Done)
+- Authentication system with JWT tokens and refresh tokens
+- Services: TokenService, RefreshTokenService, UserService
+- API endpoints: login, refresh, revoke with DTOs
+- RefreshToken entity persisted with ExpiresAt index
+- Background: RefreshTokenCleanupService with configurable settings
+- **Status**: Full test suite green (77/77 tests passing)
+
+### Phase 3 — Harden, Extend, Ship 🚧 (Current Phase)
+**Pending/Recommended next steps:**
+1. **Unit tests for other services** (not started)
+   - Priority: WalletService, TransactionService, BetService, StakeService
+2. **EF Migrations** (optional)
+   - Scaffold migration for RefreshTokens.ExpiresAt index
+   - Commit migration files
+3. **CI / Security**
+   - Add CI/CD pipeline
+   - Address dependency advisory on System.IdentityModel.Tokens.Jwt
+   - Add secret management for JwtSettings
+4. **Docs / Release**
+   - Update README with deployment steps
+   - Release notes
+   - Production hardening documentation
+
+## If Something is Unclear
+Propose the safest architectural approach rather than guessing. When in doubt, ask for clarification on:
+- Business rules
+- Edge cases
+- Security requirements
+- Performance constraints

@@ -44,6 +44,7 @@ builder.Services.AddScoped<IStakeRepository, StakeRepository>();
 // Application services
 builder.Services.AddScoped<NaijaStake.Infrastructure.Services.IUserService, NaijaStake.Infrastructure.Services.UserService>();
 builder.Services.AddScoped<NaijaStake.Infrastructure.Services.IWalletService, NaijaStake.Infrastructure.Services.WalletService>();
+builder.Services.AddScoped<NaijaStake.Infrastructure.Services.ITransactionService, NaijaStake.Infrastructure.Services.TransactionService>();
 builder.Services.AddScoped<NaijaStake.Infrastructure.Services.IBetService, NaijaStake.Infrastructure.Services.BetService>();
 builder.Services.AddScoped<NaijaStake.Infrastructure.Services.IStakeService, NaijaStake.Infrastructure.Services.StakeService>();
 // Token service for JWT generation
