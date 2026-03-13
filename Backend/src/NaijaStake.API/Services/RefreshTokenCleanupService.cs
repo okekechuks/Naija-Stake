@@ -45,10 +45,19 @@ public class RefreshTokenCleanupService : BackgroundService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error while running refresh token cleanup");
+                // Log error but don't crash - database might be temporarily unavailable
+                _logger.LogWarning(ex, "Error while running refresh token cleanup (will retry on next interval)");
             }
 
-            await Task.Delay(TimeSpan.FromSeconds(intervalSeconds), stoppingToken);
+            try
+            {
+                await Task.Delay(TimeSpan.FromSeconds(intervalSeconds), stoppingToken);
+            }
+            catch (OperationCanceledException)
+            {
+                // Host is shutting down, exit gracefully
+                break;
+            }
         }
     }
 }

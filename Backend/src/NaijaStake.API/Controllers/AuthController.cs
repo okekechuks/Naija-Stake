@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using NaijaStake.API.Dtos;
+using NaijaStake.Infrastructure.Configuration;
 using NaijaStake.Infrastructure.Services;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.Extensions.Configuration;
 
 namespace NaijaStake.API.Controllers;
 
@@ -12,15 +12,15 @@ public class AuthController : ControllerBase
 {
     private readonly IUserService _userService;
     private readonly ITokenService _tokenService;
-    private readonly IConfiguration _config;
+    private readonly JwtSettings _jwtSettings;
     private readonly IPasswordHasher _passwordHasher;
     private readonly IRefreshTokenService _refreshTokenService;
 
-    public AuthController(IUserService userService, ITokenService tokenService, IConfiguration config, IPasswordHasher passwordHasher, IRefreshTokenService refreshTokenService)
+    public AuthController(IUserService userService, ITokenService tokenService, JwtSettings jwtSettings, IPasswordHasher passwordHasher, IRefreshTokenService refreshTokenService)
     {
         _userService = userService;
         _tokenService = tokenService;
-        _config = config;
+        _jwtSettings = jwtSettings;
         _passwordHasher = passwordHasher;
         _refreshTokenService = refreshTokenService;
     }
@@ -36,13 +36,11 @@ public class AuthController : ControllerBase
             return Unauthorized();
 
         var token = _tokenService.GenerateToken(user.Id, user.Email, user.FirstName, user.LastName);
-        var jwt = _config.GetSection("JwtSettings");
-        var expiryMinutes = int.TryParse(jwt["ExpiryMinutes"], out var m) ? m : 60;
-        var expiresAt = DateTime.UtcNow.AddMinutes(expiryMinutes);
+        var expiresAt = DateTime.UtcNow.AddMinutes(_jwtSettings.AccessTokenExpirationMinutes);
 
         // Create refresh token
-        var refreshTtlMinutes = int.TryParse(jwt["RefreshExpiryMinutes"], out var r) ? r : 60 * 24 * 7;
-        var refresh = await _refreshTokenService.CreateAsync(user.Id, TimeSpan.FromMinutes(refreshTtlMinutes));
+        var refreshTtl = TimeSpan.FromDays(_jwtSettings.RefreshTokenExpirationDays);
+        var refresh = await _refreshTokenService.CreateAsync(user.Id, refreshTtl);
 
         var resp = new LoginResponseDto(
             new AuthResponseDto(token, expiresAt),
@@ -72,9 +70,7 @@ public class AuthController : ControllerBase
         if (user == null) return Unauthorized();
 
         var access = _tokenService.GenerateToken(user.Id, user.Email, user.FirstName, user.LastName);
-        var jwt = _config.GetSection("JwtSettings");
-        var expiryMinutes = int.TryParse(jwt["ExpiryMinutes"], out var m) ? m : 60;
-        var expiresAt = DateTime.UtcNow.AddMinutes(expiryMinutes);
+        var expiresAt = DateTime.UtcNow.AddMinutes(_jwtSettings.AccessTokenExpirationMinutes);
 
         var resp = new RefreshResponseDto(access, expiresAt, newRefresh.Token, newRefresh.ExpiresAt);
         return Ok(resp);

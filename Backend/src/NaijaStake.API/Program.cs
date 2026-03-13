@@ -2,14 +2,36 @@ using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using NaijaStake.Infrastructure.Configuration;
 using NaijaStake.Infrastructure.Data;
 using NaijaStake.Infrastructure.Repositories;
 using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Add user secrets for development (secrets are stored outside the project)
+if (builder.Environment.IsDevelopment())
+{
+    builder.Configuration.AddUserSecrets<Program>();
+}
+
+// Load JWT SecretKey from environment variable (takes precedence over config)
+var jwtSecretKey = builder.Configuration["JWT_SECRET_KEY"] 
+    ?? builder.Configuration["JwtSettings:SecretKey"];
+
 // Configuration
-var jwtSettings = builder.Configuration.GetSection("JwtSettings");
+var jwtSettings = builder.Configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>() 
+    ?? throw new InvalidOperationException("JwtSettings configuration is missing.");
+
+// Override SecretKey from environment variable if provided
+if (!string.IsNullOrWhiteSpace(jwtSecretKey))
+{
+    jwtSettings.SecretKey = jwtSecretKey;
+}
+
+// Validate JWT settings
+jwtSettings.Validate();
+
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 var redisConnection = builder.Configuration.GetConnectionString("Redis:ConnectionString");
 
@@ -54,8 +76,11 @@ builder.Services.AddScoped<NaijaStake.Infrastructure.Services.IRefreshTokenServi
 // Background cleanup for refresh tokens
 builder.Services.AddHostedService<NaijaStake.API.Services.RefreshTokenCleanupService>();
 
+// Register JwtSettings as a singleton for dependency injection
+builder.Services.AddSingleton(jwtSettings);
+
 // Authentication
-var secretKey = Encoding.ASCII.GetBytes(jwtSettings["SecretKey"]!);
+var secretKey = Encoding.ASCII.GetBytes(jwtSettings.SecretKey);
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -68,9 +93,9 @@ builder.Services.AddAuthentication(options =>
         ValidateIssuerSigningKey = true,
         IssuerSigningKey = new SymmetricSecurityKey(secretKey),
         ValidateIssuer = true,
-        ValidIssuer = jwtSettings["Issuer"],
+        ValidIssuer = jwtSettings.Issuer,
         ValidateAudience = true,
-        ValidAudience = jwtSettings["Audience"],
+        ValidAudience = jwtSettings.Audience,
         ValidateLifetime = true,
         ClockSkew = TimeSpan.Zero
     };
@@ -93,6 +118,12 @@ builder.Services.AddCors(options =>
 
 // SignalR for real-time updates
 builder.Services.AddSignalR();
+
+// Configure host to not stop on background service exceptions (for development resilience)
+builder.Services.Configure<Microsoft.Extensions.Hosting.HostOptions>(options =>
+{
+    options.BackgroundServiceExceptionBehavior = Microsoft.Extensions.Hosting.BackgroundServiceExceptionBehavior.Ignore;
+});
 
 var app = builder.Build();
 
